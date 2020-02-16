@@ -17,13 +17,13 @@ func Frequency(s string) FreqMap {
 // and returns a FreqMap containing letter counts for a given list
 // of strings.
 func ConcurrentFrequency(inputs []string) FreqMap {
-	ch := make(chan FreqMap)
+	ch := make(chan FreqMap, 10)
 	freq := make(FreqMap)
 
 	for _, text := range inputs {
-		go func(s string, c chan FreqMap) {
-			c <- Frequency(s)
-		}(text, ch)
+		go func(s string) {
+			ch <- Frequency(s)
+		}(text)
 	}
 
 	for range inputs {
