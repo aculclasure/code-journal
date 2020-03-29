@@ -25,11 +25,13 @@ type Robot struct {
 
 func (r *Robot) Name() (string, error) {
 	if r.name == "" {
-		r.name = getPotentialName()
-		for _, ok := usedNames[r.name]; ok; {
+		for {
 			r.name = getPotentialName()
+			if _, ok := usedNames[r.name]; !ok {
+				usedNames[r.name] = true
+				break
+			}
 		}
-		usedNames[r.name] = true
 	}
 
 	return r.name, nil
