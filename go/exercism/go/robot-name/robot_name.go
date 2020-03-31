@@ -17,6 +17,7 @@ const (
 	maxRandomDigitValue   = 9
 	numLettersInRobotName = 2
 	numDigitsInRobotName  = 3
+	maxNumUniqueNames = 26 * 26 * 10 * 10 * 10
 )
 
 // Robot represents a robot with a name attribute.
@@ -27,7 +28,7 @@ type Robot struct {
 // Name returns the name attribute for an existing Robot or generates a new
 // name and returns it if this is an uninitialized Robot.
 func (r *Robot) Name() (string, error) {
-	if r.name == "" {
+	if r.name == "" && len(usedNames) < maxNumUniqueNames {
 		for {
 			r.name = getPotentialName()
 			if _, ok := usedNames[r.name]; !ok {
@@ -35,8 +36,10 @@ func (r *Robot) Name() (string, error) {
 				break
 			}
 		}
+	} else if r.name == "" {
+		return "", fmt.Errorf("all %d possible unique names have been generated already",
+			maxNumUniqueNames)
 	}
-
 	return r.name, nil
 }
 
