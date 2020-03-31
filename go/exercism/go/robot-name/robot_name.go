@@ -17,7 +17,7 @@ const (
 	maxRandomDigitValue   = 9
 	numLettersInRobotName = 2
 	numDigitsInRobotName  = 3
-	maxNumUniqueNames = 26 * 26 * 10 * 10 * 10
+	maxNumUniqueNames     = 26 * 26 * 10 * 10 * 10
 )
 
 // Robot represents a robot with a name attribute.
