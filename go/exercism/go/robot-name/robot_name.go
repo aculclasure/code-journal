@@ -26,7 +26,9 @@ type Robot struct {
 }
 
 // Name returns the name attribute for an existing Robot or generates a new
-// name and returns it if this is an uninitialized Robot.
+// name if this is an uninitialized Robot and all possible unique names have
+// not been seen. If all possible unique names have already been seen,
+// an error is returned.
 func (r *Robot) Name() (string, error) {
 	if r.name == "" && len(usedNames) < maxNumUniqueNames {
 		for {
