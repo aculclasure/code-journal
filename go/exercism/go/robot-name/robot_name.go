@@ -19,10 +19,13 @@ const (
 	numDigitsInRobotName  = 3
 )
 
+// Robot represents a robot with a name attribute.
 type Robot struct {
 	name string
 }
 
+// Name returns the name attribute for an existing Robot or generates a new
+// name and returns it if this is an uninitialized Robot.
 func (r *Robot) Name() (string, error) {
 	if r.name == "" {
 		for {
@@ -37,6 +40,8 @@ func (r *Robot) Name() (string, error) {
 	return r.name, nil
 }
 
+// Reset resets the name attribute of a given Robot to the
+// default empty value.
 func (r *Robot) Reset() {
 	r.name = ""
 }
