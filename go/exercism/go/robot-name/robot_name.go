@@ -11,14 +11,7 @@ var (
 	usedNames       = map[string]bool{}
 )
 
-const (
-	minAllowedLetterValue = int('A')
-	validLetterValueRange = int('Z') - minAllowedLetterValue + 1
-	maxRandomDigitValue   = 9
-	numLettersInRobotName = 2
-	numDigitsInRobotName  = 3
-	maxNumUniqueNames     = 26 * 26 * 10 * 10 * 10
-)
+const maxNumUniqueNames = 26 * 26 * 10 * 10 * 10
 
 // Robot represents a robot with a name attribute.
 type Robot struct {
@@ -31,13 +24,11 @@ type Robot struct {
 // an error is returned.
 func (r *Robot) Name() (string, error) {
 	if r.name == "" && len(usedNames) < maxNumUniqueNames {
-		for {
+		r.name = getPotentialName()
+		for usedNames[r.name] {
 			r.name = getPotentialName()
-			if _, ok := usedNames[r.name]; !ok {
-				usedNames[r.name] = true
-				break
-			}
 		}
+		usedNames[r.name] = true
 	} else if r.name == "" {
 		return "", fmt.Errorf("all %d possible unique names have been generated already",
 			maxNumUniqueNames)
@@ -51,22 +42,9 @@ func (r *Robot) Reset() {
 	r.name = ""
 }
 
-func getPotentialName() string {
-	potentialName := ""
-
-	for i := 0; i < numLettersInRobotName; i++ {
-		potentialName += getRandomLetter()
-	}
-	for i := 0; i < numDigitsInRobotName; i++ {
-		potentialName += getRandomDigit()
-	}
-	return potentialName
-}
-
-func getRandomLetter() string {
-	return string(rune(randomGenerator.Intn(validLetterValueRange) + minAllowedLetterValue))
-}
-
-func getRandomDigit() string {
-	return fmt.Sprintf("%d", randomGenerator.Intn(maxRandomDigitValue+1))
+func getPotentialName() (name string) {
+	firstLetter := string(randomGenerator.Intn(26) + int('A'))
+	secondLetter := string(randomGenerator.Intn(26) + int('A'))
+	num := randomGenerator.Intn(1000)
+	return fmt.Sprintf("%s%s%03d", firstLetter, secondLetter, num)
 }
