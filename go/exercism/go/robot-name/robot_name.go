@@ -23,16 +23,21 @@ type Robot struct {
 // not been seen. If all possible unique names have already been seen,
 // an error is returned.
 func (r *Robot) Name() (string, error) {
-	if r.name == "" && len(usedNames) < maxNumUniqueNames {
-		r.name = getPotentialName()
-		for usedNames[r.name] {
-			r.name = getPotentialName()
-		}
-		usedNames[r.name] = true
-	} else if r.name == "" {
-		return "", fmt.Errorf("all %d possible unique names have been generated already",
+	if r.name != "" {
+		return r.name, nil
+	}
+
+	if len(usedNames) >= maxNumUniqueNames {
+		return "", fmt.Errorf("all %d unique names have been used already",
 			maxNumUniqueNames)
 	}
+
+	r.name = getPotentialName()
+	for usedNames[r.name] {
+		r.name = getPotentialName()
+	}
+	usedNames[r.name] = true
+
 	return r.name, nil
 }
 
