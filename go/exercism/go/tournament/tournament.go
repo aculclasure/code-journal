@@ -9,56 +9,86 @@ import (
 	"strings"
 )
 
-type teamRecord struct {
-	teamName  string
-	numWins   int
-	numLosses int
-	numDraws  int
-	points    int
+type match struct {
+	team1  string
+	team2  string
+	result string
 }
 
-type byPoints []*teamRecord
+type team struct {
+	name   string
+	wins   int
+	losses int
+	draws  int
+}
+
+func (t *team) getPoints() int { return (3 * t.wins) + t.draws }
+
+type byPoints []*team
 
 func (a byPoints) Len() int { return len(a) }
+
 func (a byPoints) Less(i, j int) bool {
-	if a[i].points < a[j].points {
+	if a[i].getPoints() < a[j].getPoints() {
 		return true
 	}
-	if a[i].points > a[j].points {
+	if a[i].getPoints() > a[j].getPoints() {
 		return false
 	}
-	return a[i].teamName > a[j].teamName
+	return a[i].name > a[j].name
 }
+
 func (a byPoints) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
-var competitionRecords map[string]*teamRecord
+type competition map[string]*team
 
-// Tally accepts a series of football match records representing a
-// competition and returns a summary table of statistics for
-// the competition.
-func Tally(reader io.Reader, writer io.Writer) error {
-	competitionRecords = map[string]*teamRecord{}
-	addRecords(reader)
-	sortedResults := getSortedCompetitionResults()
-	if len(sortedResults) == 0 {
-		return fmt.Errorf("competition should have records of matches played")
+func (c competition) addMatchResult(team1, team2, result string) {
+	t1 := &team{name: team1}
+	t2 := &team{name: team2}
+
+	switch result {
+	case "win":
+		t1.wins++
+		t2.losses++
+	case "loss":
+		t1.losses++
+		t2.wins++
+	default:
+		t1.draws++
+		t2.draws++
 	}
-	return writeResults(writer, sortedResults)
+	for _, team := range []*team{t1, t2} {
+		if teamRecord, ok := c[team.name]; ok {
+			teamRecord.wins += team.wins
+			teamRecord.losses += team.losses
+			teamRecord.draws += team.draws
+		} else {
+			c[team.name] = team
+		}
+	}
 }
 
-func addRecords(r io.Reader) {
+func (c competition) addMatchRecordsFromReader(r io.Reader) {
 	bufReader := bufio.NewReader(r)
 
 	for line, err := bufReader.ReadString('\n'); err == nil; {
-		if matchData, err := getMatchData(getTrimmedFields(line)); err == nil {
-			t1, t2 := getMatchRecords(matchData)
-			addMatchRecord(t1)
-			addMatchRecord(t2)
+		if m, err := getMatchData(getTrimmedFields(line)); err == nil {
+			c.addMatchResult(m.team1, m.team2, m.result)
 		} else {
 			log.Printf("got error processing line \"%s\": %s", line, err.Error())
 		}
 		line, err = bufReader.ReadString('\n')
 	}
+}
+
+func (c competition) getSortedTeamRecords() []*team {
+	allRecords := make([]*team, 0, len(c))
+
+	for _, v := range c {
+		allRecords = append(allRecords, v)
+	}
+	sort.Sort(sort.Reverse(byPoints(allRecords)))
+	return allRecords
 }
 
 func getTrimmedFields(line string) []string {
@@ -71,7 +101,7 @@ func getTrimmedFields(line string) []string {
 	return trimmedFields
 }
 
-func getMatchData(matchFields []string) (map[string]string, error) {
+func getMatchData(matchFields []string) (*match, error) {
 	if len(matchFields) != 3 {
 		return nil, fmt.Errorf("a match record line should have at least 3 fields")
 	}
@@ -84,26 +114,15 @@ func getMatchData(matchFields []string) (map[string]string, error) {
 		return nil, fmt.Errorf("a match record should end with win, loss, or draw")
 	}
 
-	return map[string]string{
-		"firstTeamName":  matchFields[0],
-		"secondTeamName": matchFields[1],
-		"matchResult":    matchFields[2],
+	return &match{
+		team1:  matchFields[0],
+		team2:  matchFields[1],
+		result: matchFields[2],
 	}, nil
 }
 
-func addMatchRecord(record *teamRecord) {
-	if r, ok := competitionRecords[record.teamName]; !ok {
-		competitionRecords[record.teamName] = record
-	} else {
-		r.numWins += record.numWins
-		r.numLosses += record.numLosses
-		r.numDraws += record.numDraws
-		r.points = (3 * r.numWins) + r.numDraws
-	}
-}
-
-func writeResults(w io.Writer, sortedResults []*teamRecord) error {
-	pad := getLongestTeamNameLength() + 8
+func writeResults(w io.Writer, sortedResults []*team) error {
+	pad := getLongestTeamNameLength(sortedResults) + 8
 
 	_, err := w.Write([]byte(fmt.Sprintf("%*s|%3s |%3s |%3s |%3s |%3s\n",
 		-pad, "Team", "MP", "W", "D", "L", "P")))
@@ -114,12 +133,12 @@ func writeResults(w io.Writer, sortedResults []*teamRecord) error {
 	for _, r := range sortedResults {
 		_, err = w.Write([]byte(fmt.Sprintf("%*s|%3d |%3d |%3d |%3d |%3d\n",
 			-pad,
-			r.teamName,
-			r.numWins+r.numLosses+r.numDraws,
-			r.numWins,
-			r.numDraws,
-			r.numLosses,
-			r.points)))
+			r.name,
+			r.wins+r.losses+r.draws,
+			r.wins,
+			r.draws,
+			r.losses,
+			r.getPoints())))
 		if err != nil {
 			return err
 		}
@@ -127,44 +146,26 @@ func writeResults(w io.Writer, sortedResults []*teamRecord) error {
 	return nil
 }
 
-func getSortedCompetitionResults() []*teamRecord {
-	allRecords := make([]*teamRecord, 0, len(competitionRecords))
-
-	for _, v := range competitionRecords {
-		allRecords = append(allRecords, v)
-	}
-	sort.Sort(sort.Reverse(byPoints(allRecords)))
-	return allRecords
-}
-
-func getLongestTeamNameLength() int {
+func getLongestTeamNameLength(teams []*team) int {
 	max := 0
 
-	for teamName := range competitionRecords {
-		if len(teamName) > max {
-			max = len(teamName)
+	for _, t := range teams {
+		if len(t.name) > max {
+			max = len(t.name)
 		}
 	}
 	return max
 }
 
-func getMatchRecords(recordData map[string]string) (*teamRecord, *teamRecord) {
-	team1 := &teamRecord{teamName: recordData["firstTeamName"]}
-	team2 := &teamRecord{teamName: recordData["secondTeamName"]}
-
-	switch recordData["matchResult"] {
-	case "win":
-		team1.numWins++
-		team2.numLosses++
-	case "loss":
-		team1.numLosses++
-		team2.numWins++
-	default:
-		team1.numDraws++
-		team2.numDraws++
+// Tally accepts a series of football match records representing a
+// competition and returns a summary table of statistics for
+// the competition.
+func Tally(reader io.Reader, writer io.Writer) error {
+	c := competition{}
+	c.addMatchRecordsFromReader(reader)
+	sortedResults := c.getSortedTeamRecords()
+	if len(sortedResults) == 0 {
+		return fmt.Errorf("competition should have records of matches played")
 	}
-	for _, t := range []*teamRecord{team1, team2} {
-		t.points = (3 * t.numWins) + t.numDraws
-	}
-	return team1, team2
+	return writeResults(writer, sortedResults)
 }
