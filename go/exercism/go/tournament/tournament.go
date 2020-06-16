@@ -26,19 +26,19 @@ func (t *team) getPoints() int { return (3 * t.wins) + t.draws }
 
 type byPoints []*team
 
-func (a byPoints) Len() int { return len(a) }
+func (b byPoints) Len() int { return len(b) }
 
-func (a byPoints) Less(i, j int) bool {
-	if a[i].getPoints() < a[j].getPoints() {
+func (b byPoints) Less(i, j int) bool {
+	if b[i].getPoints() < b[j].getPoints() {
 		return true
 	}
-	if a[i].getPoints() > a[j].getPoints() {
+	if b[i].getPoints() > b[j].getPoints() {
 		return false
 	}
-	return a[i].name > a[j].name
+	return b[i].name > b[j].name
 }
 
-func (a byPoints) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (b byPoints) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
 
 type competition map[string]*team
 
