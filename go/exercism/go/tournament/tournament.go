@@ -4,168 +4,81 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"sort"
 	"strings"
 )
 
-type match struct {
-	team1  string
-	team2  string
-	result string
-}
+const teamNamePadLength int = 30
 
 type team struct {
-	name   string
-	wins   int
-	losses int
-	draws  int
+	name    string
+	wins    int
+	losses  int
+	draws   int
+	matches int
 }
 
 func (t *team) getPoints() int { return (3 * t.wins) + t.draws }
-
-type byPoints []*team
-
-func (b byPoints) Len() int { return len(b) }
-
-func (b byPoints) Less(i, j int) bool {
-	if b[i].getPoints() < b[j].getPoints() {
-		return true
-	}
-	if b[i].getPoints() > b[j].getPoints() {
-		return false
-	}
-	return b[i].name > b[j].name
-}
-
-func (b byPoints) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
-
-type competition map[string]*team
-
-func (c competition) addMatchResult(team1, team2, result string) {
-	t1 := &team{name: team1}
-	t2 := &team{name: team2}
-
-	switch result {
-	case "win":
-		t1.wins++
-		t2.losses++
-	case "loss":
-		t1.losses++
-		t2.wins++
-	default:
-		t1.draws++
-		t2.draws++
-	}
-	for _, team := range []*team{t1, t2} {
-		if teamRecord, ok := c[team.name]; ok {
-			teamRecord.wins += team.wins
-			teamRecord.losses += team.losses
-			teamRecord.draws += team.draws
-		} else {
-			c[team.name] = team
-		}
-	}
-}
-
-func (c competition) addMatchRecordsFromReader(r io.Reader) {
-	bufReader := bufio.NewReader(r)
-
-	for line, err := bufReader.ReadString('\n'); err == nil; {
-		if m, err := getMatchData(getTrimmedFields(line)); err == nil {
-			c.addMatchResult(m.team1, m.team2, m.result)
-		} else {
-			log.Printf("got error processing line \"%s\": %s", line, err.Error())
-		}
-		line, err = bufReader.ReadString('\n')
-	}
-}
-
-func (c competition) getSortedTeamRecords() []*team {
-	allRecords := make([]*team, 0, len(c))
-
-	for _, v := range c {
-		allRecords = append(allRecords, v)
-	}
-	sort.Sort(sort.Reverse(byPoints(allRecords)))
-	return allRecords
-}
-
-func getTrimmedFields(line string) []string {
-	fields := strings.Split(line, ";")
-	var trimmedFields []string
-
-	for _, field := range fields {
-		trimmedFields = append(trimmedFields, strings.TrimSpace(field))
-	}
-	return trimmedFields
-}
-
-func getMatchData(matchFields []string) (*match, error) {
-	if len(matchFields) != 3 {
-		return nil, fmt.Errorf("a match record line should have at least 3 fields")
-	}
-
-	if matchFields[0] == matchFields[1] {
-		return nil, fmt.Errorf("a match record should be for 2 different teams")
-	}
-
-	if matchFields[2] != "win" && matchFields[2] != "loss" && matchFields[2] != "draw" {
-		return nil, fmt.Errorf("a match record should end with win, loss, or draw")
-	}
-
-	return &match{
-		team1:  matchFields[0],
-		team2:  matchFields[1],
-		result: matchFields[2],
-	}, nil
-}
-
-func writeResults(w io.Writer, sortedResults []*team) error {
-	pad := getLongestTeamNameLength(sortedResults) + 8
-
-	_, err := w.Write([]byte(fmt.Sprintf("%*s|%3s |%3s |%3s |%3s |%3s\n",
-		-pad, "Team", "MP", "W", "D", "L", "P")))
-	if err != nil {
-		return err
-	}
-
-	for _, r := range sortedResults {
-		_, err = w.Write([]byte(fmt.Sprintf("%*s|%3d |%3d |%3d |%3d |%3d\n",
-			-pad,
-			r.name,
-			r.wins+r.losses+r.draws,
-			r.wins,
-			r.draws,
-			r.losses,
-			r.getPoints())))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func getLongestTeamNameLength(teams []*team) int {
-	max := 0
-
-	for _, t := range teams {
-		if len(t.name) > max {
-			max = len(t.name)
-		}
-	}
-	return max
-}
 
 // Tally accepts a series of football match records representing a
 // competition and returns a summary table of statistics for
 // the competition.
 func Tally(reader io.Reader, writer io.Writer) error {
-	c := competition{}
-	c.addMatchRecordsFromReader(reader)
-	sortedResults := c.getSortedTeamRecords()
-	if len(sortedResults) == 0 {
-		return fmt.Errorf("competition should have records of matches played")
+	scanner := bufio.NewScanner(reader)
+	competition := make(map[string]*team)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		fields := strings.Split(line, ";")
+		if len(fields) != 3 {
+			return fmt.Errorf("got invalid line input: %s", line)
+		}
+
+		team1, team2, matchResult := fields[0], fields[1], fields[2]
+		if _, ok := competition[team1]; !ok {
+			competition[team1] = &team{name: team1}
+		}
+		if _, ok := competition[team2]; !ok {
+			competition[team2] = &team{name: team2}
+		}
+		team1Record, team2Record := competition[team1], competition[team2]
+		team1Record.matches++
+		team2Record.matches++
+		switch matchResult {
+		case "win":
+			team1Record.wins++
+			team2Record.losses++
+		case "loss":
+			team1Record.losses++
+			team2Record.wins++
+		case "draw":
+			team1Record.draws++
+			team2Record.draws++
+		default:
+			return fmt.Errorf("got invalid match outcome: %s", matchResult)
+		}
 	}
-	return writeResults(writer, sortedResults)
+	allTeamRecords := make([]*team, 0, len(competition))
+	for _, v := range competition {
+		allTeamRecords = append(allTeamRecords, v)
+	}
+	sort.Slice(allTeamRecords, func(i, j int) bool {
+		if allTeamRecords[i].getPoints() == allTeamRecords[j].getPoints() {
+			return allTeamRecords[i].name < allTeamRecords[j].name
+		}
+		return allTeamRecords[i].getPoints() > allTeamRecords[j].getPoints()
+	})
+	fmt.Fprintf(writer,
+		"%*s | %2s | %2s | %2s | %2s | %2s\n",
+		-teamNamePadLength, "Team", "MP", "W", "D", "L", "P")
+	for _, t := range allTeamRecords {
+		fmt.Fprintf(writer,
+			"%*s | %2d | %2d | %2d | %2d | %2d\n",
+			-teamNamePadLength, t.name, t.matches, t.wins, t.draws, t.losses, t.getPoints())
+	}
+	return nil
 }
