@@ -34,7 +34,7 @@ func Tally(reader io.Reader, writer io.Writer) error {
 
 		fields := strings.Split(line, ";")
 		if len(fields) != 3 {
-			return fmt.Errorf("got invalid line input: %s", line)
+			return fmt.Errorf("invalid line (want 'teamA;teamB;result'): %s", line)
 		}
 
 		a, b, matchResult := fields[0], fields[1], fields[2]
@@ -57,7 +57,7 @@ func Tally(reader io.Reader, writer io.Writer) error {
 			teamB.draws++
 			teamB.points++
 		default:
-			return fmt.Errorf("got invalid match outcome: %s", matchResult)
+			return fmt.Errorf("invalid match result (want 'win', 'loss', or 'draw'): %s", matchResult)
 		}
 		competition[a] = teamA
 		competition[b] = teamB
