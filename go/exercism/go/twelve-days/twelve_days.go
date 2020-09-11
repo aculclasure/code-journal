@@ -5,13 +5,8 @@ import (
 	"strings"
 )
 
-type day struct {
-	numberWord string
-	gift       string
-}
-
-var giftsByDay = []day{
-	{},
+var giftsByDay = [][]string{
+	{""},
 	{"first", "a Partridge in a Pear Tree."},
 	{"second", "two Turtle Doves"},
 	{"third", "three French Hens"},
@@ -29,19 +24,17 @@ var giftsByDay = []day{
 // Verse accepts a day of Christmas (as an int) and returns the corresponding
 // verse as a string.
 func Verse(day int) string {
-	switch {
-	case day == 1:
+	if day == 1 {
 		return fmt.Sprintf("On the %s day of Christmas my true love gave to me: %s",
-			giftsByDay[1].numberWord, giftsByDay[1].gift)
-	default:
-		verse := fmt.Sprintf("On the %s day of Christmas my true love gave to me: %s, ",
-			giftsByDay[day].numberWord, giftsByDay[day].gift)
-		for i := day - 1; i > 1; i-- {
-			verse += fmt.Sprintf("%s, ", giftsByDay[i].gift)
-		}
-		verse += fmt.Sprintf("and %s", giftsByDay[1].gift)
-		return verse
+			giftsByDay[day][0], giftsByDay[day][1])
 	}
+	verse := fmt.Sprintf("On the %s day of Christmas my true love gave to me: %s, ",
+		giftsByDay[day][0], giftsByDay[day][1])
+	for i := day - 1; i > 1; i-- {
+		verse += giftsByDay[i][1] + ", "
+	}
+	verse += "and " + giftsByDay[1][1]
+	return verse
 }
 
 // Song returns the "Twelve Days of Christmas" song as a string.
