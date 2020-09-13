@@ -28,10 +28,5 @@ func Verse(day int) string {
 
 // Song returns the "Twelve Days of Christmas" song as a string.
 func Song() string {
-	song := ""
-
-	for i := 1; i <= 12; i++ {
-		song += Verse(i) + "\n"
-	}
-	return strings.TrimSpace(song)
+	return strings.Join(songVerses, "\n")
 }
