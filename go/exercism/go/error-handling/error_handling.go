@@ -1,15 +1,23 @@
 package erratum
 
+import (
+	"fmt"
+)
+
 // Use opens a resource and calls Frob(input) on that resource,
 // returning any errors encountered that are not a TransientError.
 func Use(o ResourceOpener, input string) (e error) {
-	resource, e := o()
-	if e != nil {
-		if _, ok := e.(TransientError); ok {
-			return Use(o, input)
+	var resource Resource
+
+	for resource, e = o(); e != nil; {
+		switch e.(type) {
+		case TransientError:
+			resource, e = o()
+		default:
+			return e
 		}
-		return e
 	}
+	defer resource.Close()
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -20,10 +28,9 @@ func Use(o ResourceOpener, input string) (e error) {
 			case error:
 				e = r.(error)
 			default:
-				panic(r)
+				e = fmt.Errorf("got unexpected return value from call to Frob(input): %v", r)
 			}
 		}
-		resource.Close()
 	}()
 	resource.Frob(input)
 	return nil
