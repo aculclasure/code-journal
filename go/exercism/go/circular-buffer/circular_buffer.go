@@ -12,8 +12,10 @@ type Buffer struct {
 
 // NewBuffer returns a new Buffer of a specified size.
 func NewBuffer(size int) *Buffer {
-	data := make([]byte, size)
-	return &Buffer{data: data}
+	if size < 1 {
+		return nil
+	}
+	return &Buffer{data: make([]byte, size)}
 }
 
 // ReadByte returns the oldest byte in the given Buffer b or returns
