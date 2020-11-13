@@ -77,14 +77,14 @@ func (w *writeCounter) WriteCount() (int64, int) {
 }
 
 type readWriteCounter struct {
-	readCounter
-	writeCounter
+	ReadCounter
+	WriteCounter
 }
 
 // NewReadWriteCounter returns a ReadWriteCounter on the given io.ReadWriter rw.
 func NewReadWriteCounter(rw io.ReadWriter) ReadWriteCounter {
 	return &readWriteCounter{
-		readCounter{reader: rw, counter: &counter{}},
-		writeCounter{writer: rw, counter: &counter{}},
+		NewReadCounter(rw),
+		NewWriteCounter(rw),
 	}
 }
