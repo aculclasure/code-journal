@@ -37,8 +37,8 @@ func (a *Account) Close() (int64, bool) {
 // Balance returns the balance of an account if the account is open and a bool
 // indicating if the account is open.
 func (a *Account) Balance() (int64, bool) {
-	a.Lock()
-	defer a.Unlock()
+	a.RLock()
+	defer a.RUnlock()
 	if a.closed {
 		return 0, false
 	}
