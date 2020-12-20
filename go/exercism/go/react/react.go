@@ -39,7 +39,7 @@ func (s *sheet) CreateCompute1(c Cell, f func(int) int) ComputeCell {
 	return computeCell
 }
 
-// CreateCompute1 creates a compute cell which computes its value
+// CreateCompute2 creates a compute cell which computes its value
 // based on two other cells. The compute function will only be called
 // if the value of either of the passed cells changes.
 func (s *sheet) CreateCompute2(c1, c2 Cell, f func(int, int) int) ComputeCell {
