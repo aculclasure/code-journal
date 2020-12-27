@@ -15,7 +15,7 @@ func SearchInts(values []int, key int) int {
 			return head
 		}
 
-		if head == tail || head == len(values) || tail < 0 {
+		if head >= tail || tail < 0 {
 			return -1
 		}
 
